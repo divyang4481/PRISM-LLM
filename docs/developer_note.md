@@ -12,7 +12,10 @@ This document outlines the dataset preparation strategy and the planned phases f
 - **Format**: Pretokenized `.npy` files (uint16/uint32) with a corresponding `metadata.json`.
 - **Storage**: `data_cache/<dataset_name>/`
 
-### Phase 2: Knowledge Distillation & Memory Integration
+> [!CAUTION]
+> **Tokenizer Alignment**: Always verify that the `vocab_size` in your training YAML matches the `vocab_size` recorded in `metadata.json` of your prepared dataset.
+
+## Phase 2: Knowledge Distillation & Memory Integration
 **Goal**: Integrate the PRISM multi-bank memory system and align it using KD.
 - **Datasets**: Expanded WikiText and multi-domain corpora.
 - **Complexity**: Introduction of long-context samples (4k+).

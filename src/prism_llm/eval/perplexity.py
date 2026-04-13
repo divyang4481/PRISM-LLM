@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
-from typing import Dict
+from typing import Dict, Optional
 import math
+
+from tqdm import tqdm
 
 def calculate_perplexity(mean_loss: float) -> float:
     """
@@ -15,7 +17,8 @@ def calculate_perplexity(mean_loss: float) -> float:
 def evaluate_perplexity(
     model: nn.Module,
     dataloader: torch.utils.data.DataLoader,
-    device: torch.device
+    device: torch.device,
+    max_batches: Optional[int] = None
 ) -> Dict[str, float]:
     """
     Evaluates a model's perplexity on a given dataloader.
@@ -24,8 +27,17 @@ def evaluate_perplexity(
     total_loss = 0.0
     total_batches = 0
 
+    # Determine number of batches for the progress bar
+    num_batches = len(dataloader)
+    if max_batches is not None:
+        num_batches = min(num_batches, max_batches)
+
     with torch.no_grad():
-        for batch in dataloader:
+        pbar = tqdm(total=num_batches, desc="Evaluating", leave=False)
+        for i, batch in enumerate(dataloader):
+            if max_batches is not None and i >= max_batches:
+                break
+                
             input_ids = batch["input_ids"].to(device)
             labels = batch["labels"].to(device) if "labels" in batch else input_ids
 
@@ -34,6 +46,9 @@ def evaluate_perplexity(
             if "loss" in outputs:
                 total_loss += outputs["loss"].item()
                 total_batches += 1
+            
+            pbar.update(1)
+        pbar.close()
 
     if total_batches == 0:
         return {"loss": 0.0, "perplexity": 0.0}

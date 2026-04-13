@@ -70,6 +70,9 @@ PRISM-LLM/
    poetry install
    ```
 
+> [!IMPORTANT]
+> **Vocab Size Alignment**: Ensure the `vocab_size` in your model config (e.g., `student_tiny.yaml`) matches the tokenizer used in `prepare_dataset.py`. For `gpt2`, use `50257`.
+
 ---
 
 # 🏃 Running

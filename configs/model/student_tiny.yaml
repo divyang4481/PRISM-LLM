@@ -1,4 +1,4 @@
-vocab_size: 1000
+vocab_size: 50257 # Match GPT-2 tokenizer used in prepare_dataset.py
 max_seq_len: 128
 d_model: 256
 n_layers: 4

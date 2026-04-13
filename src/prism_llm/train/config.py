@@ -23,6 +23,7 @@ class TrainConfig:
     eval_steps: int = 100
     save_steps: int = 500
     logging_steps: int = 10
+    max_eval_batches: int = 50   # Limit evaluation to 50 batches for speed
 
     # Directories
     output_dir: str = "outputs"

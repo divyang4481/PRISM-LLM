@@ -68,8 +68,10 @@ class Trainer:
 
         start_time = time.time()
         tokens_processed = 0
-
-        for step in range(1, self.config.max_steps + 1):
+        
+        start_step = self.global_step + 1
+        
+        for step in range(start_step, self.config.max_steps + 1):
             self.global_step = step
             batch = next(train_iter)
 
@@ -136,7 +138,8 @@ class Trainer:
         eval_results = evaluate_perplexity(
             model=self.model,
             dataloader=self.eval_dataloader,
-            device=self.device
+            device=self.device,
+            max_batches=self.config.max_eval_batches
         )
 
         logger.info(

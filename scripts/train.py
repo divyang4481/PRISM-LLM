@@ -18,6 +18,9 @@ def main():
     parser.add_argument("--data_config", type=str, help="Path to data config YAML (optional)")
     parser.add_argument("--output_dir", type=str, help="Override output directory")
     parser.add_argument("--data_dir", type=str, help="Path to directory with train.npy and val.npy")
+    parser.add_argument("--device", type=str, default=None, help="Force device (cuda or cpu)")
+    parser.add_argument("--resume_from", type=str, default=None, help="Path to checkpoint to resume from")
+    parser.add_argument("--max_steps", type=int, default=None, help="Override maximum training steps")
     
     args = parser.parse_args()
 
@@ -27,6 +30,18 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     logger = logging.getLogger(__name__)
+
+    # Debug CUDA
+    import torch
+    cuda_available = torch.cuda.is_available()
+    logger.info(f"Torch Version: {torch.__version__}")
+    logger.info(f"Torch Path: {torch.__file__}")
+    logger.info(f"CUDA Available at script start: {cuda_available}")
+    if cuda_available:
+        logger.info(f"Current GPU: {torch.cuda.get_device_name(0)}")
+    
+    device = args.device if args.device else ("cuda" if cuda_available else "cpu")
+    logger.info(f"Using device: {device}")
 
     # Load configs
     logger.info(f"Loading model config from {args.model_config}")
@@ -41,6 +56,11 @@ def main():
     else:
         logger.info("Using default data config (synthetic)")
         d_cfg = DataConfig(vocab_size=m_cfg.vocab_size, seq_len=m_cfg.max_seq_len)
+
+    # Overrides
+    if args.max_steps is not None:
+        t_cfg.max_steps = args.max_steps
+        logger.info(f"Overriding max_steps to {t_cfg.max_steps}")
 
     if args.output_dir:
         t_cfg.output_dir = args.output_dir
@@ -65,20 +85,18 @@ def main():
         train_dataset = PretokenizedDataset(train_path, seq_len=m_cfg.max_seq_len)
         eval_dataset = PretokenizedDataset(val_path, seq_len=m_cfg.max_seq_len)
     else:
-        logger.info(f"Initializing dataset (type: {d_cfg.dataset_type})...")
-        if d_cfg.dataset_type == "synthetic":
-            train_dataset = SyntheticDataset(
-                vocab_size=d_cfg.vocab_size,
-                seq_len=d_cfg.seq_len,
-                num_samples=d_cfg.num_samples
-            )
-            eval_dataset = SyntheticDataset(
-                vocab_size=d_cfg.vocab_size,
-                seq_len=d_cfg.seq_len,
-                num_samples=d_cfg.num_samples // 10
-            )
-        else:
-            raise NotImplementedError("Pretokenized dataset loading not fully implemented in CLI without --data_dir.")
+        logger.info(f"Initializing dataset (type: {d_cfg.dataset_type if 'd_cfg' in locals() else 'synthetic'})...")
+        # Fallback to synthetic if no data_dir
+        train_dataset = SyntheticDataset(
+            vocab_size=m_cfg.vocab_size,
+            seq_len=m_cfg.max_seq_len,
+            num_samples=1000
+        )
+        eval_dataset = SyntheticDataset(
+            vocab_size=m_cfg.vocab_size,
+            seq_len=m_cfg.max_seq_len,
+            num_samples=100
+        )
 
     collator = CausalLMCollator()
     
@@ -101,8 +119,16 @@ def main():
         model=model,
         train_config=t_cfg,
         train_dataloader=train_dataloader,
-        eval_dataloader=eval_dataloader
+        eval_dataloader=eval_dataloader,
+        device=device
     )
+
+    # Handle Resumption
+    if args.resume_from:
+        from prism_llm.train.checkpoint import load_checkpoint
+        logger.info(f"Resuming from checkpoint: {args.resume_from}")
+        checkpoint_data = load_checkpoint(args.resume_from, model, optimizer=trainer.optimizer, scheduler=trainer.scheduler, map_location=device)
+        trainer.global_step = checkpoint_data["step"]
 
     # Start training
     trainer.train()

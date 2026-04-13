@@ -37,7 +37,39 @@ def save_checkpoint(
     torch.save(checkpoint, checkpoint_path)
     logger.info(f"Saved checkpoint to {checkpoint_path}")
 
+    # Prune old checkpoints
+    prune_checkpoints(output_dir, filename_prefix, keep_latest=2)
+
     return checkpoint_path
+
+def prune_checkpoints(output_dir: str, prefix: str, keep_latest: int = 2):
+    """
+    Deletes old checkpoints, keeping only the most recent N ones.
+    """
+    checkpoints = [
+        f for f in os.listdir(output_dir) 
+        if f.startswith(prefix) and f.endswith(".pt")
+    ]
+    
+    # Sort by step number (extracted from filename like checkpoint-50.pt)
+    def extract_step(filename):
+        try:
+            return int(filename.split("-")[-1].split(".")[0])
+        except ValueError:
+            return -1
+
+    checkpoints.sort(key=extract_step)
+
+    # Remove oldest ones
+    if len(checkpoints) > keep_latest:
+        to_remove = checkpoints[:-keep_latest]
+        for f in to_remove:
+            path = os.path.join(output_dir, f)
+            try:
+                os.remove(path)
+                logger.info(f"Pruned old checkpoint: {f}")
+            except Exception as e:
+                logger.warning(f"Failed to prune {f}: {e}")
 
 def load_checkpoint(
     checkpoint_path: str,
