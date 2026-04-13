@@ -170,3 +170,11 @@ outputs/
 data/
 *.pt
 *.bin
+
+# Additional ignores for PRISM-LLM
+data_cache/
+checkpoints/
+logs/
+*.npy
+*.npz
+*.jsonl
