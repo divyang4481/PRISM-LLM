@@ -1,0 +1,13 @@
+vocab_size: 50257
+max_seq_len: 2048 # High context but realistic for a laptop GPU
+d_model: 256
+n_layers: 4
+n_heads: 8
+n_kv_heads: 2
+mlp_ratio: 4.0
+dropout: 0.1
+attention_dropout: 0.1
+rope_base: 10000.0
+norm_eps: 1e-5
+bias: false
+tie_word_embeddings: true
