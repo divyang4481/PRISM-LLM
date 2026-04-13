@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, Any
+from typing import Optional
 import logging
 
 from .trainer import Trainer
 from .config import TrainConfig
-from ..distill.kd_losses import kl_distillation_loss, hidden_state_mse_loss
+from ..distill.kd_losses import kl_distillation_loss
 
 logger = logging.getLogger(__name__)
 

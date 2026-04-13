@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
 def kl_distillation_loss(student_logits: torch.Tensor, teacher_logits: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:

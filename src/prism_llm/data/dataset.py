@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset
 import numpy as np
 from typing import List, Union
+from pathlib import Path
 
 class SyntheticDataset(Dataset):
     """
@@ -24,33 +25,35 @@ class SyntheticDataset(Dataset):
 
 class PretokenizedDataset(Dataset):
     """
-    A dataset that loads pre-tokenized integer sequences from a numpy array
-    or list of lists and provides fixed-length chunks.
+    A dataset that loads pre-tokenized integer sequences from a numpy array,
+    file path (via mmap), or list of lists and provides fixed-length chunks.
     """
-    def __init__(self, data: Union[np.ndarray, List[List[int]], torch.Tensor], seq_len: int):
-        if isinstance(data, list):
+    def __init__(self, data: Union[str, Path, np.ndarray, List[List[int]], torch.Tensor], seq_len: int):
+        self.seq_len = seq_len
+
+        if isinstance(data, (str, Path)):
+            self.data = np.load(str(data), mmap_mode='r')
+            if self.data.ndim > 1:
+                self.data = self.data.reshape(-1)
+        elif isinstance(data, list):
             # Flatten if it's a list of lists, or assume it's a flat list
             if data and isinstance(data[0], list):
                 flat_data = [item for sublist in data for item in sublist]
-                self.data = torch.tensor(flat_data, dtype=torch.long)
+                self.data = np.array(flat_data, dtype=np.int64)
             else:
-                self.data = torch.tensor(data, dtype=torch.long)
+                self.data = np.array(data, dtype=np.int64)
         elif isinstance(data, np.ndarray):
-            self.data = torch.from_numpy(data).long()
+            self.data = data
+            if self.data.ndim > 1:
+                self.data = self.data.reshape(-1)
         elif isinstance(data, torch.Tensor):
-            self.data = data.long()
+            self.data = data
+            if self.data.dim() > 1:
+                self.data = self.data.view(-1)
         else:
-            raise ValueError("Unsupported data type")
+            raise ValueError(f"Unsupported data type: {type(data)}")
 
-        # Flatten the data to a 1D tensor
-        if self.data.dim() > 1:
-            self.data = self.data.view(-1)
-
-        self.seq_len = seq_len
         self.num_samples = len(self.data) // self.seq_len
-
-        # Truncate to exact multiple of seq_len
-        self.data = self.data[:self.num_samples * self.seq_len]
 
     def __len__(self) -> int:
         return self.num_samples
@@ -58,4 +61,12 @@ class PretokenizedDataset(Dataset):
     def __getitem__(self, idx: int) -> torch.Tensor:
         start_idx = idx * self.seq_len
         end_idx = start_idx + self.seq_len
-        return self.data[start_idx:end_idx]
+
+        chunk = self.data[start_idx:end_idx]
+
+        if isinstance(chunk, torch.Tensor):
+            return chunk.long()
+        else:
+            # chunk is a numpy array or memmap slice
+            # We copy it into a torch tensor of type long
+            return torch.tensor(np.array(chunk), dtype=torch.long)

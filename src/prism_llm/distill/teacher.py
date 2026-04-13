@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 from typing import Optional
 from ..model.decoder import DecoderForCausalLM
