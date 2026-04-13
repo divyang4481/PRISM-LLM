@@ -1,0 +1,10 @@
+per_device_train_batch_size: 4
+per_device_eval_batch_size: 4
+learning_rate: 5e-4
+weight_decay: 0.01
+max_steps: 5000
+warmup_steps: 100
+logging_steps: 50
+eval_steps: 500
+save_steps: 500
+output_dir: "outputs/stage2a_longer_run"
