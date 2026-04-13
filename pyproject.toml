@@ -9,6 +9,11 @@ packages = [{include = "prism_llm", from = "src"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 torch = "^2.0.0"
+transformers = "*"
+sentencepiece = "*"
+numpy = "*"
+tqdm = "*"
+pyyaml = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
