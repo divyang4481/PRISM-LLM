@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 from prism_llm.model.config import ModelConfig
 from prism_llm.model.decoder import DecoderForCausalLM
-from prism_llm.train.config import TrainConfig, DataConfig
+from prism_llm.train.config import TrainConfig
 from prism_llm.train.kd_trainer import KDTrainer
 from prism_llm.distill.teacher import load_teacher_model
 from prism_llm.data.dataset import SyntheticDataset

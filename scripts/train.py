@@ -1,7 +1,6 @@
 import argparse
 import logging
 import os
-import torch
 from torch.utils.data import DataLoader
 
 from prism_llm.model.config import ModelConfig

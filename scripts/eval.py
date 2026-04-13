@@ -79,7 +79,7 @@ def main():
     results = evaluate_perplexity(model, dataloader, device)
     
     logger.info("-" * 30)
-    logger.info(f"Evaluation Results:")
+    logger.info("Evaluation Results:")
     logger.info(f"Loss: {results['loss']:.4f}")
     logger.info(f"Perplexity: {results['perplexity']:.4f}")
     logger.info("-" * 30)
