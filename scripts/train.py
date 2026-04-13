@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import torch
 from torch.utils.data import DataLoader
 
@@ -17,6 +18,7 @@ def main():
     parser.add_argument("--train_config", type=str, required=True, help="Path to train config YAML")
     parser.add_argument("--data_config", type=str, help="Path to data config YAML (optional)")
     parser.add_argument("--output_dir", type=str, help="Override output directory")
+    parser.add_argument("--data_dir", type=str, help="Path to directory with train.npy and val.npy")
     
     args = parser.parse_args()
 
@@ -49,21 +51,35 @@ def main():
     model = DecoderForCausalLM(m_cfg)
 
     # Initialize dataset
-    logger.info(f"Initializing dataset (type: {d_cfg.dataset_type})...")
-    if d_cfg.dataset_type == "synthetic":
-        train_dataset = SyntheticDataset(
-            vocab_size=d_cfg.vocab_size,
-            seq_len=d_cfg.seq_len,
-            num_samples=d_cfg.num_samples
-        )
-        eval_dataset = SyntheticDataset(
-            vocab_size=d_cfg.vocab_size,
-            seq_len=d_cfg.seq_len,
-            num_samples=d_cfg.num_samples // 10
-        )
+    if args.data_dir:
+        logger.info(f"Initializing dataset from dir: {args.data_dir}")
+        train_path = os.path.join(args.data_dir, "train.npy")
+        val_path = os.path.join(args.data_dir, "val.npy")
+        if not os.path.exists(val_path):
+            val_path = os.path.join(args.data_dir, "validation.npy")
+
+        if not os.path.exists(train_path):
+            raise FileNotFoundError(f"Training data not found at {train_path}. Directory structure doesn't match expected output.")
+        if not os.path.exists(val_path):
+            raise FileNotFoundError(f"Validation data not found in {args.data_dir}. Expected val.npy or validation.npy.")
+
+        train_dataset = PretokenizedDataset(train_path, seq_len=m_cfg.max_seq_len)
+        eval_dataset = PretokenizedDataset(val_path, seq_len=m_cfg.max_seq_len)
     else:
-        # Placeholder for pretokenized logic if needed
-        raise NotImplementedError("Pretokenized dataset loading not fully implemented in CLI yet.")
+        logger.info(f"Initializing dataset (type: {d_cfg.dataset_type})...")
+        if d_cfg.dataset_type == "synthetic":
+            train_dataset = SyntheticDataset(
+                vocab_size=d_cfg.vocab_size,
+                seq_len=d_cfg.seq_len,
+                num_samples=d_cfg.num_samples
+            )
+            eval_dataset = SyntheticDataset(
+                vocab_size=d_cfg.vocab_size,
+                seq_len=d_cfg.seq_len,
+                num_samples=d_cfg.num_samples // 10
+            )
+        else:
+            raise NotImplementedError("Pretokenized dataset loading not fully implemented in CLI without --data_dir.")
 
     collator = CausalLMCollator()
     
