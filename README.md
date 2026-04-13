@@ -338,3 +338,26 @@ Tell me and I’ll generate it immediately:
 👉 **“Design teacher model + dataset plan”**
 
 We can go from idea → working model very fast now 🚀
+
+---
+
+# 🚀 Setup (Conda + Poetry)
+
+We recommend using a hybrid **Conda + Poetry** setup. This handles GPU/PyTorch compatibility via Conda, and python package dependencies cleanly through Poetry.
+
+1. **Create and activate a conda environment**:
+   ```bash
+   conda create -n prism-llm python=3.10
+   conda activate prism-llm
+   ```
+
+2. **Install PyTorch via conda**:
+   ```bash
+   conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+   ```
+
+3. **Install Poetry and remaining dependencies**:
+   ```bash
+   pip install poetry
+   poetry install
+   ```
