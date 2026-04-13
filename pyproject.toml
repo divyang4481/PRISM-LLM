@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "prism-llm"
+version = "0.1.0"
+description = "Prime-Residual Integrated Sparse Memory Transformer"
+authors = ["PRISM-LLM Contributors <divyang4481@gmail.com>"]
+readme = "README.md"
+packages = [{include = "prism_llm", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+ruff = "^0.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
