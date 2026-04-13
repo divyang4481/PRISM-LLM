@@ -32,7 +32,7 @@ class GroupedQueryAttention(nn.Module):
         sin: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
         return_attn_weights: bool = False,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]: # Return (out, q, k, v)
         batch_size, seq_len, _ = hidden_states.shape
 
         if seq_len > self.max_seq_len:
@@ -54,51 +54,68 @@ class GroupedQueryAttention(nn.Module):
 
         # Apply RoPE
         q, k = apply_rotary_pos_emb(q, k, cos, sin)
+        
+        # Store for return before expansion
+        q_out, k_out, v_out = q, k, v
 
-        # Grouped-Query Attention: Expand K and V
-        # [batch, n_kv_heads, seq_len, head_dim] -> [batch, n_kv_heads, 1, seq_len, head_dim]
-        k = k.unsqueeze(2)
-        v = v.unsqueeze(2)
-
-        # Expand across groups
-        # [batch, n_kv_heads, n_kv_groups, seq_len, head_dim]
-        k = k.expand(-1, -1, self.n_kv_groups, -1, -1)
-        v = v.expand(-1, -1, self.n_kv_groups, -1, -1)
-
-        # Reshape to match Q's heads
-        # [batch, n_heads, seq_len, head_dim]
-        k = k.reshape(batch_size, self.n_heads, seq_len, self.head_dim)
-        v = v.reshape(batch_size, self.n_heads, seq_len, self.head_dim)
+        # Grouped-Query Attention: Expand K and V to match Q's heads
+        k, v = self.expand_kv(k, v)
 
         # Manual Scaled Dot-Product Attention
+        causal_mask = torch.ones((seq_len, seq_len), dtype=torch.bool, device=hidden_states.device).tril()
+        if attention_mask is not None:
+            # Combine causal mask with padding mask if provided
+            causal_mask = causal_mask & (attention_mask > -1).squeeze(1)
+
+        attn_output = self.scaled_dot_product_attention(
+            q, k, v, 
+            mask=causal_mask
+        )
+
+        # Return raw [batch, n_heads, seq_len, head_dim] and QKV
+        return attn_output, q_out, k_out, v_out
+
+    def expand_kv(self, k: torch.Tensor, v: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Expand K/V heads to match Q heads for GQA calculation.
+        """
+        batch_size, n_kv_heads, seq_len, head_dim = k.shape
+        if n_kv_heads == self.n_heads:
+            return k, v
+            
+        k = k.unsqueeze(2).expand(-1, -1, self.n_kv_groups, -1, -1)
+        v = v.unsqueeze(2).expand(-1, -1, self.n_kv_groups, -1, -1)
+        
+        k = k.reshape(batch_size, self.n_heads, seq_len, head_dim)
+        v = v.reshape(batch_size, self.n_heads, seq_len, head_dim)
+        return k, v
+
+    def scaled_dot_product_attention(
+        self,
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
+        """
+        Standard Matmul Attention.
+        q: [batch, heads, seq_len_q, head_dim]
+        k: [batch, heads, seq_len_kv, head_dim]
+        v: [batch, heads, seq_len_kv, head_dim]
+        """
         # Q @ K^T / sqrt(d)
-        # [batch, n_heads, seq_len, head_dim] @ [batch, n_heads, head_dim, seq_len] -> [batch, n_heads, seq_len, seq_len]
         attn_weights = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
 
-        # Causal mask creation
-        # Create a boolean mask where True means "keep" and False means "-inf"
-        causal_mask = torch.ones((seq_len, seq_len), dtype=torch.bool, device=hidden_states.device).tril()
-
-        # Apply causal mask (convert False positions to -inf)
-        attn_weights = attn_weights.masked_fill(~causal_mask, float('-inf'))
-
-        # Optional additive attention mask (e.g., from padding) broadcastable to [batch, 1, seq_len, seq_len]
-        if attention_mask is not None:
-             # attention_mask is expected to contain 0 for keep and -inf for mask, or similar additive structure
-             attn_weights = attn_weights + attention_mask
+        if mask is not None:
+             # Apply mask (convert False positions to -inf)
+             # Expand mask for batch and heads
+             if mask.dim() == 2:
+                 mask = mask.unsqueeze(0).unsqueeze(1)
+             attn_weights = attn_weights.masked_fill(~mask, float('-inf'))
 
         # Softmax and Dropout
         attn_weights_probs = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(q.dtype)
         attn_weights_probs = self.attn_dropout(attn_weights_probs)
 
         # Matmul with V
-        # [batch, n_heads, seq_len, seq_len] @ [batch, n_heads, seq_len, head_dim] -> [batch, n_heads, seq_len, head_dim]
-        attn_output = torch.matmul(attn_weights_probs, v)
-
-        # Reshape and project out
-        # [batch, n_heads, seq_len, head_dim] -> [batch, seq_len, n_heads, head_dim] -> [batch, seq_len, d_model]
-        attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
-        attn_output = self.o_proj(attn_output)
-        attn_output = self.resid_dropout(attn_output)
-
-        return attn_output, attn_weights_probs if return_attn_weights else None
+        return torch.matmul(attn_weights_probs, v)

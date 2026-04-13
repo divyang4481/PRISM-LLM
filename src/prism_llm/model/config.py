@@ -15,6 +15,10 @@ class ModelConfig:
     norm_eps: float
     bias: bool
     tie_word_embeddings: bool
+    
+    # PRISM Memory Parameters
+    memory_window: int = 256
+    anchor_interval: int = 16
 
     activation: str = "silu"
     norm_type: str = "rmsnorm"

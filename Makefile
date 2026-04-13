@@ -4,7 +4,7 @@ install:
 	poetry install
 
 test:
-	poetry run pytest tests/ || true
+	poetry run pytest tests/
 
 lint:
 	poetry run ruff check .

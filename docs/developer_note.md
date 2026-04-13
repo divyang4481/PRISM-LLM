@@ -1,6 +1,17 @@
-# Developer Notes - PRISM-LLM Dataset Strategy
+# Developer Note: Baseline Verification & Memory Pivot
 
-This document outlines the dataset preparation strategy and the planned phases for model training.
+## 📝 Status Update (2026-04-13)
+We have successfully verified the **Baseline GQA Decoder**. On an RTX 4050, the model achieves ~15k tok/s and clearly learns narrative patterns (e.g., "Once upon a time, Lily...") within 800 steps.
+
+### 🚩 Critical Realization
+As of this milestone, the repository is a **working GQA baseline**, but NOT yet the full **PRISM Architecture**. The memory banks are still in the scaffolded/placeholder phase. 
+
+### 🎯 Next Objectives (The "Memory First" Pivot)
+1. **Ditch Synthetic KD**: We will NOT move to full Distillation (Phase 2B) until the memory banks are integrated. Distilling a standard decoder doesn't prove our architecture.
+2. **Memory MVP**: Implement `RecentMemoryBank` and `AnchorMemoryBank` first.
+3. **Verify Context Gains**: Use the new `scripts/benchmark_model.py` to compare:
+    * Baseline (Dense Attention) - *Done*
+    * PRISM-MVP (Recent + Anchor) - *Upcoming*
 
 ## 📊 Dataset Phases
 

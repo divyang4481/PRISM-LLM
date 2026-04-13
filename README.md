@@ -1,21 +1,29 @@
-# 🚀 PRISM-LLM
+# 🚀 PRISM-LLM (Parallel Real-time Integrated Storage & Memory)
 
-### **Prime-Residual Integrated Sparse Memory Transformer**
+**Project Status**: 🟢 **Phase 1 (Baseline Infrastructure) - Complete** | 🟡 **Phase 2 (Memory Architecture) - In Progress**
 
-> A bounded-memory large language model architecture designed to achieve **long-context reasoning (4k+) under 2–4 GB VRAM** using **prime-aware sparse memory, semantic compression, and reconstructive latent states**.
+> [!IMPORTANT]
+> **Status Note**: The repository currently implements a high-performance **GQA (Grouped Query Attention) Decoder Baseline**. While the baseline is verified, GPU-accelerated, and producing narrative text, the core "PRISM Memory System" (Recent, Anchor, Summary, Latent banks) is currently in the MVP implementation stage.
 
----
+## 🚀 Accomplishments (Phase 1)
+- **Architecture**: Verified GQA (4:1 ratio) with RoPE and RMSNorm.
+- **Pipeline**: Memory-mapped `.npy` pretokenization for instant billion-token loading.
+- **Hardware**: Fully optimized for laptop GPUs (RTX 4050 tested) with 15k tok/s throughput.
+- **Stability**: Checkpoint resumption and auto-pruning (latest 2 kept).
+- **Inference**: Working `scripts/generate.py` for narrative validation.
 
-# 🧠 Motivation
+## 🛠 Experimental Roadmap (Phase 2)
+We are currently moving from a standard Dense Decoder to the structured PRISM memory architecture.
 
-Standard Transformers scale poorly with context:
-- KV cache grows **linearly with tokens**
-- Memory becomes the bottleneck before compute
-- Long-context models require **high-end GPUs**
+### Phase 2A: Memory MVP
+1. **RecentMemoryBank**: Fixed sliding-window local context.
+2. **AnchorMemoryBank**: Deterministic "prime" token selection and cross-attention.
+3. **Memory Router**: Learned gating mechanism to mix local and anchor context.
 
-PRISM-LLM introduces a new paradigm:
-> ❌ Store everything
-> ✅ Store only what matters — and reconstruct the rest
+### Phase 2B: Full PRISM
+1. **Summary Bank**: Semantic compression.
+2. **Latent Bank**: Reconstructive memory.
+3. **Distillation (KD)**: Teaching the memory student using a dense teacher.
 
 ---
 

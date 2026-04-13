@@ -11,3 +11,7 @@ rope_base: 10000.0
 norm_eps: 1e-5
 bias: false
 tie_word_embeddings: true
+
+# PRISM Memory Settings
+memory_window: 128
+anchor_interval: 16
